@@ -1,6 +1,4 @@
 from app.main.model.user import User
-from ..service.blacklist_service import save_token
-
 
 class Auth:
 
@@ -41,15 +39,11 @@ class Auth:
             auth_token = ''
         if auth_token:
             resp = User.decode_auth_token(auth_token)
-            if not isinstance(resp, str):
-                # mark the token as blacklisted
-                return save_token(token=auth_token)
-            else:
-                response_object = {
-                    'status': 'fail',
-                    'message': resp
-                }
-                return response_object, 401
+            response_object = {
+                'status': 'fail',
+                'message': resp
+            }
+            return response_object, 401
         else:
             response_object = {
                 'status': 'fail',

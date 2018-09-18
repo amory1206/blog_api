@@ -17,3 +17,31 @@ class AuthDto:
         'email': fields.String(required=True, description='The email address'),
         'password': fields.String(required=True, description='The user password '),
     })
+
+
+class PostDto:
+    api = Namespace('post', description='post related operations')
+    post = api.model('post', {
+        'id': fields.Integer(required=True, description='id of post'),
+        'title': fields.String(required=True, description='title of post'),
+        'description': fields.String(required=True, description='description'),
+        'user_id': fields.Integer(required=True, description='user_id'),
+    })
+    postDetails = api.model('post', {
+        'title': fields.String(required=True, description='title of post'),
+        'description': fields.String(required=True, description='description'),
+        'user_id': fields.Integer(required=True, description='user_id'),
+        'content': fields.String(required=True, description='content'),
+    })
+
+
+class LikedDto:
+    api = Namespace('liked', description='liked related operations')
+    liked = api.model('liked', {
+        'user_name': fields.String(required=True, description='user_name of post'),
+        'user_id': fields.Integer(required=True, description='user_id'),
+    })
+    liked_req = api.model('liked', {
+        'post_id': fields.Integer(required=True, description='id of post'),
+        'user_id': fields.Integer(required=True, description='user_id'),
+    })
