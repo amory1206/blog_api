@@ -35,14 +35,16 @@ def save_new_post(data):
             return response_object, 409
 
 def get_all_posts():
-    return db.engine.execute('select * from posts ORDER BY id desc').fetchall()
+    posts =Posts.query.all()
+    print(posts)
+    print(posts[1].user.username)
+    return posts
 
 def get_a_post_by_user(user_id):
     return Posts.query.filter_by(user_id=user_id).all()
 
 def get_a_post_by_id(post_id):
-    query = 'select * from posts where id= %s' % (post_id)
-    return db.engine.execute(query).first()
+    return Posts.query.get(post_id)
 
 def save_changes(data):
     db.session.add(data)

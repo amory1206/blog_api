@@ -25,11 +25,13 @@ class PostDto:
         'id': fields.Integer(required=True, description='id of post'),
         'title': fields.String(required=True, description='title of post'),
         'description': fields.String(required=True, description='description'),
+        'like_number': fields.Integer(required=True, description='like_number'),
         'user_id': fields.Integer(required=True, description='user_id'),
     })
     postDetails = api.model('post', {
         'title': fields.String(required=True, description='title of post'),
         'description': fields.String(required=True, description='description'),
+        'like_number': fields.Integer(required=True, description='like_number'),
         'user_id': fields.Integer(required=True, description='user_id'),
         'content': fields.String(required=True, description='content'),
     })
@@ -38,7 +40,6 @@ class PostDto:
 class LikedDto:
     api = Namespace('liked', description='liked related operations')
     liked = api.model('liked', {
-        'user_name': fields.String(required=True, description='user_name of post'),
         'user_id': fields.Integer(required=True, description='user_id'),
     })
     liked_req = api.model('liked', {

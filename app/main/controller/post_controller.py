@@ -6,7 +6,7 @@ from ..service.post_service import save_new_post, get_all_posts, get_a_post_by_u
 
 api = PostDto.api
 _post = PostDto.post
-postDetails = PostDto.postDetails
+# postDetails = PostDto.postDetails
 
 @api.route('/')
 @api.header('Authorization')
@@ -39,15 +39,13 @@ class post_user(Resource):
 @api.route('/<post_id>')
 @api.param('post_id', 'The post identifier')
 @api.response(404, 'post not found.')
-@api.errorhandler(Exception)
 class post_id(Resource):
     @api.doc('get a post')
-    @api.marshal_with(postDetails)
+    @api.marshal_with(_post)
     def get(self, post_id):
+        """get a post given its identifier"""
         try:
-            """get a post given its identifier"""
             post = get_a_post_by_id(post_id)
-            print(post)
             if not post:
                 response_object = {
                         'status': 'fail',
