@@ -9,6 +9,12 @@ class UserDto:
         'password': fields.String(required=True, description='user password'),
         'public_id': fields.String(description='user Identifier')
     })
+    update = api.model('user', {
+        'email': fields.String(required=True, description='user email address'),
+        'name': fields.String(required=True, description='user name '),
+        'phone_number': fields.String(description='user phone_number'),
+        'job': fields.String(description='user job'),
+    })
 
 
 class AuthDto:
@@ -16,6 +22,9 @@ class AuthDto:
     user_auth = api.model('auth_details', {
         'email': fields.String(required=True, description='The email address'),
         'password': fields.String(required=True, description='The user password '),
+    })
+    auth = api.model('auth', {
+        'auth_code': fields.String(required=True, description='auth code'),
     })
 
 

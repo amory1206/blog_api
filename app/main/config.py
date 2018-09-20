@@ -18,6 +18,7 @@ class Config:
             'secret':  os.getenv('GOOGLE_CLIENT_SECRET')
         }
     }
+    REDIRECT_URI = os.getenv('REDIRECT_URI')
     DEBUG = False
 
 
@@ -25,6 +26,7 @@ class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = Config.DB
     OAUTH_CREDENTIALS = Config.OAUTH_CREDENTIALS
+    REDIRECT_URI= Config.REDIRECT_URI
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
@@ -33,6 +35,7 @@ class TestingConfig(Config):
     TESTING = True
     OAUTH_CREDENTIALS = Config.OAUTH_CREDENTIALS
     SQLALCHEMY_DATABASE_URI = Config.DB
+    REDIRECT_URI= Config.REDIRECT_URI
     PRESERVE_CONTEXT_ON_EXCEPTION = False
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

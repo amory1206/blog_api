@@ -3,7 +3,7 @@ from flask_restplus import Resource
 
 from ..util.dto import LikedDto
 from ..service.liked_service import save_new_liked, get_a_liked_by_user, get_a_liked_by_post
-
+from app.main.util.decorator import token_required, infomation_required
 api = LikedDto.api
 _liked = LikedDto.liked
 _liked_request = LikedDto.liked_req
@@ -12,6 +12,8 @@ _liked_request = LikedDto.liked_req
 @api.route('/')
 @api.header('Authorization')
 class likedList(Resource):
+    @token_required
+    @infomation_required
     @api.expect(_liked_request, validate=True)
     @api.response(201, 'liked successfully created.')
     @api.doc('create a new liked')
@@ -23,8 +25,11 @@ class likedList(Resource):
 @api.route('/user/<user_id>')
 @api.param('user_id', 'The liked identifier')
 @api.response(404, 'liked not found.')
+@api.header('Authorization')
 class liked_user(Resource):
     @api.doc('get a liked')
+    @token_required
+    @infomation_required
     @api.marshal_list_with(_liked, envelope='data')
     def get(self, user_id):
         """get a liked given its identifier"""
@@ -33,8 +38,11 @@ class liked_user(Resource):
 @api.route('/post/<posts_id>')
 @api.param('posts_id', 'The liked identifier')
 @api.response(404, 'liked not found.')
+@api.header('Authorization')
 class liked_post(Resource):
     @api.doc('get a liked')
+    @token_required
+    @infomation_required
     @api.marshal_list_with(_liked, envelope='data')
     def get(self, posts_id):
         """get a liked given its identifier"""

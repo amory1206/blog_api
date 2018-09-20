@@ -18,3 +18,17 @@ def token_required(f):
         return f(*args, **kwargs)
 
     return decorated
+
+def infomation_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+
+        data, status = Auth.check_login(request)
+        token = data.get('data')
+
+        if not token:
+            return data, status
+
+        return f(*args, **kwargs)
+
+    return decorated

@@ -1,12 +1,12 @@
 from flask import request, Flask, redirect, url_for, render_template, flash
 from flask_restplus import Resource
-from flask_login import LoginManager, UserMixin, login_user, logout_user,\
-    current_user
+import json
 from app.main.service.auth_helper import Auth
 from ..util.dto import AuthDto
 from app.main.util.oauth import OAuthSignIn
 api = AuthDto.api
 user_auth = AuthDto.user_auth
+auth = AuthDto.auth
 
 
 @api.route('/login')
@@ -36,30 +36,38 @@ class LogoutAPI(Resource):
 @api.route('/authorize/<provider>')
 @api.param('provider', 'The provider identifier')
 class oauth_authorize(Resource):
-    @api.doc('logout a user')
+    @api.doc('get url call back a user')
     def get(self,provider):
-        if not current_user.is_anonymous:
-            return "ass"
         oauth = OAuthSignIn.get_provider(provider)
-        return oauth.authorize()
+        return oauth.get_Url()
 
 @api.route('/callback/<provider>')
 @api.param('provider', 'The provider identifier')
-class oauth_callback(Resource):
-    @api.doc('logout a user')
-    def get(self,provider):
-        if not current_user.is_anonymous:
-            return "ass"
+class get_data(Resource):
+    @api.doc('get access token a user')
+    @api.expect(auth, validate=True)
+    def post(self, provider):
+        post_data = request.json
+        auth_code = request.get_json().get('auth_code')
         oauth = OAuthSignIn.get_provider(provider)
-        social_id, username, email = oauth.callback()
-        if social_id is None:
-            print('Authentication failed.')
-            return None
-        # user = User.query.filter_by(social_id=social_id).first()
-        # if not user:
-        #     user = User(social_id=social_id, nickname=username, email=email)
-        #     db.session.add(user)
-        #     db.session.commit()
-        login_user(user, True)
-        print(social_id, username, email)
-        return email
+        credentials = oauth.callback(auth_code)
+        return credentials
+
+@api.route('/getUser/<provider>')
+@api.param('provider', 'The provider identifier')
+class get_data(Resource):
+    @api.doc('get access token a user')
+    @api.expect(auth, validate=True)
+    def post(self, provider):
+        post_data = request.json
+        auth_code = request.get_json().get('auth_code')
+        oauth = OAuthSignIn.get_provider(provider)
+        credentials = json.loads(oauth.getData(auth_code))
+        return credentials
+
+@api.route('/oauth2callback')
+class oauth_callback(Resource):
+    @api.doc('get access token a user')
+    def get(self):
+        code = request.args.get('code')
+        return code

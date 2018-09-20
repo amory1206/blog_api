@@ -24,8 +24,8 @@ manager.add_command('db', MigrateCommand)
 
 @manager.command
 def run():
-    # app.run(port=9999, ssl_context='adhoc')
-    app.run(port=9999)
+    app.run(port=9999, ssl_context='adhoc')
+    # app.run(port=9999)
 
 
 @manager.command

@@ -80,3 +80,40 @@ class Auth:
                 'message': 'Provide a valid auth token.'
             }
             return response_object, 401
+
+    @staticmethod
+    def check_login(new_request):
+        auth_token = new_request.headers.get('Authorization')
+        if auth_token:
+            resp = User.decode_auth_token(auth_token)
+            print(resp)
+            if not isinstance(resp, str):
+                user = User.query.filter_by(id=resp).first()
+                print(user.email)
+                if user.name is None or (user.type_user == 'fb' and user.phone_number is None) or (user.type_user == 'google' and user.job is None):
+                    response_object = {
+                        'status': 'failse',
+                        'message': 'please provider infomation user'
+                    }
+                    return response_object, 200
+                response_object = {
+                    'status': 'success',
+                    'data': {
+                        'user_id': user.id,
+                        'email': user.email,
+                        'admin': user.admin,
+                        'registered_on': str(user.registered_on)
+                    }
+                }
+                return response_object, 200
+            response_object = {
+                'status': 'fail',
+                'message': resp
+            }
+            return response_object, 401
+        else:
+            response_object = {
+                'status': 'fail',
+                'message': 'Provide a valid auth token.'
+            }
+            return response_object, 401

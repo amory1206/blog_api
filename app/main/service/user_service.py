@@ -32,6 +32,31 @@ def get_all_users():
 def get_a_user(public_id):
     return User.query.filter_by(public_id=public_id).first()
 
+def save_user(data):
+    user = User.query.filter_by(email=data['email']).first()
+    if user:
+        user.name = data['name']
+        if data['phone_number'] and user.type_user == 'fb' :
+            user.phone_number = data['phone_number']
+        if data['job'] and user.type_user == 'google'  :
+            user.job = data['job']
+        save_changes(user)
+
+        response_object = {
+                    'status': 'success',
+                    'data': {
+                        'user_id': user.id,
+                        'email': user.email,
+                        'registered_on': str(user.registered_on)
+                    }
+                }
+        return response_object, 409
+    else:
+        response_object = {
+            'status': 'fail',
+            'message': 'User does not exists. Please Log in.',
+        }
+        return response_object, 409
 
 def generate_token(user):
     try:

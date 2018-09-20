@@ -1,8 +1,12 @@
 import json
+import uuid
+import datetime
 
-from rauth import OAuth1Service, OAuth2Service
-from flask import current_app, url_for, request, redirect, session
-
+from flask import current_app, url_for, request, redirect, session, request ,jsonify
+import flask
+import requests
+from app.main.model.user import User
+from app.main.service.user_service import save_changes, generate_token
 
 class OAuthSignIn(object):
     providers = None
@@ -19,9 +23,11 @@ class OAuthSignIn(object):
     def callback(self):
         pass
 
+    def getData(self):
+        pass
+
     def get_callback_url(self):
-        return url_for('api.auth_oauth_callback', provider=self.provider_name,
-                       _external=True)
+        return current_app.config['REDIRECT_URI']
 
     @classmethod
     def get_provider(self, provider_name):
@@ -36,78 +42,132 @@ class OAuthSignIn(object):
 class FacebookSignIn(OAuthSignIn):
     def __init__(self):
         super(FacebookSignIn, self).__init__('facebook')
-        self.service = OAuth2Service(
-            name='facebook',
-            client_id=self.consumer_id,
-            client_secret=self.consumer_secret,
-            authorize_url='https://graph.facebook.com/oauth/authorize',
-            access_token_url='https://graph.facebook.com/oauth/access_token',
-            base_url='https://graph.facebook.com/'
-        )
+        self.url = ('https://www.facebook.com/v3.1/dialog/oauth?response_type=code&scope=email'
+                '&app_id={}&redirect_uri={}').format(self.consumer_id, self.get_callback_url())
 
-    def authorize(self):
-        return redirect(self.service.get_authorize_url(
-            scope='email',
-            response_type='code',
-            redirect_uri=self.get_callback_url())
-        )
+    def get_Url(self):
+        return self.url
 
-    def callback(self):
-        def decode_json(payload):
-            return json.loads(payload.decode('utf-8'))
-
-        if 'code' not in request.args:
-            return None, None, None
-        oauth_session = self.service.get_auth_session(
-            data={'code': request.args['code'],
-                  'grant_type': 'authorization_code',
-                  'redirect_uri': self.get_callback_url()},
-            decoder=decode_json
-        )
-        me = oauth_session.get('me?fields=id,email').json()
-        return (
-            'facebook$' + me['id'],
-            me.get('email').split('@')[0],  # Facebook does not provide
-                                            # username, so the email's user
-                                            # is used instead
-            me.get('email')
-        )
-
+    def callback(self, auth_code):
+        if auth_code is not None:
+            data = {'code': auth_code,
+                'client_id': self.consumer_id,
+                'client_secret': self.consumer_secret,
+                'scope': 'email',
+                'redirect_uri': self.get_callback_url(),
+                'grant_type': 'authorization_code'}
+            r = requests.post('https://graph.facebook.com/oauth/access_token', data=data)
+            credentials = json.loads(r.text)
+            if credentials['access_token']:
+                url = 'https://graph.facebook.com/me?fields=id,email&access_token={}'.format(credentials['access_token'])
+                data = json.loads(requests.get(url).text)
+                user = User.query.filter_by(email=data['email']).first()
+                if user:
+                    if user.type_user == 'google':
+                        response ={
+                            'message': 'User already exists. Please Log in with google'
+                        }
+                        return json.dumps(response)
+                    else:
+                        user.access_token_fb = credentials['access_token']
+                        user.expires_in_fb = credentials['expires_in']
+                        save_changes(user)
+                        return json.dumps(generate_token(user))
+                else:
+                    new_user = User(
+                        public_id=str(uuid.uuid4()),
+                        email=data['email'],
+                        registered_on=datetime.datetime.utcnow(),
+                        access_token_fb = credentials['access_token'],
+                        expires_in_fb= credentials['expires_in'],
+                        type_user = 'fb'
+                    )
+                    save_changes(new_user)
+                    return json.dumps(generate_token(new_user))
+            return r.text
+        return None
+    
+    def getData(self, access_token):
+        url = 'https://graph.facebook.com/me?fields=id,email&access_token={}'.format(access_token)
+        data = json.loads(requests.get(url).text)
+        user = User.query.filter_by(email=data['email']).first()
+        if user:
+            if user.type_user == 'google':
+                response ={
+                    'message': 'User already exists. Please Log in with google'
+                }
+                return json.dumps(response)
+            else:
+                return json.dumps(generate_token(user))
+        else:
+            response ={
+                        'message': 'User already exists. Please Log in with facebook'
+                        }
+            return json.dumps(response)
 
 class GoogleSignIn(OAuthSignIn):
     def __init__(self):
         super(GoogleSignIn, self).__init__('google')
-        self.service = OAuth2Service(
-        name='google',
-        client_id=self.consumer_id,
-        client_secret=self.consumer_secret,
-        base_url='https://www.googleapis.com/oauth2/v1/',
-        access_token_url='https://accounts.google.com/o/oauth2/token',
-        authorize_url='https://accounts.google.com/o/oauth2/auth'
-        )
+        self.url =  ('https://accounts.google.com/o/oauth2/v2/auth?response_type=code&access_type=offline'
+                '&client_id={}&redirect_uri={}&scope={}').format(self.consumer_id, self.get_callback_url(), 'https://www.googleapis.com/auth/plus.login+https://www.googleapis.com/auth/userinfo.email')
 
-    def authorize(self):
-        return redirect(self.service.get_authorize_url(
-            scope='https://www.googleapis.com/auth/userinfo.email',
-            response_type='code',
-            access_type ='offline',
-            redirect_uri=self.get_callback_url()),
-        )
+    def get_Url(self):
+        return self.url
 
-    def callback(self):
-        if 'code' not in request.args :
-            return None, None, None, None
-        code = request.args['code']
-        payload = {
-         'grant_type': 'authorization_code',
-          'code': code,
-           'scope':'https://www.googleapis.com/auth/userinfo.email',
-           'redirect_uri':self.get_callback_url()
-        }
-        access_token = self.service.get_access_token(decoder=json.loads, data=payload)
-        oauth_session = self.service.get_session(access_token)
-        me = oauth_session.get('userinfo').json()
-        social_id = 'google$' + me.get('id')
-        username = me.get('email').split('@')[0]
-        email = me.get('email')
-        return social_id, username, email
+    def callback(self, auth_code):
+        if auth_code is not None:
+            data = {'code': auth_code,
+                'client_id': self.consumer_id,
+                'client_secret': self.consumer_secret,
+                'scope': 'https://www.googleapis.com/auth/plus.login',
+                'redirect_uri': self.get_callback_url(),
+                'grant_type': 'authorization_code'}
+            r = requests.post('https://www.googleapis.com/oauth2/v4/token', data=data)
+            credentials = json.loads(r.text)
+            print(r.text)
+            if credentials['access_token']:
+                url = 'https://www.googleapis.com/oauth2/v1/userinfo?access_token={}'.format(credentials['access_token'])
+                data = json.loads(requests.get(url).text)
+                user = User.query.filter_by(email=data['email']).first()
+                if user:
+                    if user.type_user == 'fb':
+                        response ={
+                            'message': 'User already exists. Please Log in with facebook'
+                        }
+                        return json.dumps(response)
+                    else:
+                        user.access_token_google = credentials['access_token']
+                        user.expires_in_google = credentials['expires_in']
+                        save_changes(user)
+                        return json.dumps(generate_token(user))
+                else:
+                    new_user = User(
+                        public_id=str(uuid.uuid4()),
+                        email=data['email'],
+                        registered_on =datetime.datetime.utcnow(),
+                        access_token_google = credentials['access_token'],
+                        expires_in_google = credentials['expires_in'],
+                        type_user = 'google'
+                    )
+                    save_changes(new_user)
+                    return json.dumps(generate_token(new_user))
+            return r.text
+        return None
+
+    def getData(self, access_token):
+        url = 'https://www.googleapis.com/oauth2/v1/userinfo?access_token={}'.format(access_token)
+        data = json.loads(requests.get(url).text)
+        user = User.query.filter_by(email=data['email']).first()
+        if user:
+            if user.type_user == 'fb':
+                response ={
+                    'message': 'User already exists. Please Log in with fb'
+                }
+                return json.dumps(response)
+            else:
+                return json.dumps(generate_token(user))
+        else:
+            response ={
+                        'message': 'User already exists. Please Log in with google'
+                        }
+            return json.dumps(response)
